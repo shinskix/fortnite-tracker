@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	httpClient = &http.Client{Timeout: 5 * time.Second}
-	nameToNick = map[string]string{
+	httpClient     = &http.Client{Timeout: 10 * time.Second}
+	nameToNickname = map[string]string{
 		"alik":  "alikklimenkov",
 		"lesha": "shinskix",
 		"sasha": "Jakser",
@@ -67,13 +67,33 @@ func main() {
 			case "start":
 				continue
 			case "stats":
-				bot.Send(playerStats(chatID, update.Message.CommandArguments(), client))
+				playerInfo, err := client.PlayerInfo(PC, update.Message.CommandArguments())
+				if err != nil {
+					log.Println(err)
+				} else {
+					bot.Send(prepareStats(chatID, playerInfo))
+				}
 			case "alik", "vetal", "lesha", "sasha":
-				if nickname, exists := nameToNick[command]; exists {
-					bot.Send(playerStats(chatID, nickname, client))
+				if nickname, exists := nameToNickname[command]; exists {
+					playerInfo, err := client.PlayerInfo(PC, nickname)
+					if err != nil {
+						log.Println(err)
+					} else {
+						bot.Send(prepareStats(chatID, playerInfo))
+					}
 				}
 			case "team":
-				bot.Send(groupStats(chatID, client))
+				group := PlayerInfoGroup{}
+				for _, nickname := range nameToNickname {
+					info, err := client.PlayerInfo(PC, nickname)
+					if err != nil {
+						log.Println(err)
+					} else {
+						group.Players = append(group.Players, *info)
+					}
+					time.Sleep(2 * time.Second)
+				}
+				bot.Send(prepareStats(chatID, &group))
 			default:
 				bot.Send(tgbotapi.NewMessage(chatID, "Unknown or not yet implemented command."))
 			}
@@ -81,36 +101,9 @@ func main() {
 	}
 }
 
-func playerStats(chatID int64, nickname string, client FortniteTrackerClient) tgbotapi.MessageConfig {
-	msg := tgbotapi.NewMessage(chatID, "")
-	if len(nickname) > 0 {
-		playerInfo, err := client.PlayerInfo(PC, nickname)
-		if err != nil {
-			log.Printf("failed to get player info %v", err)
-			msg.Text = "Try again in a few moments"
-		} else {
-			buf := new(bytes.Buffer)
-			writeStats(buf, playerInfo)
-			msg.ParseMode = "html"
-			msg.Text = "<pre>" + buf.String() + "</pre>"
-		}
-	}
-	return msg
-}
-
-func groupStats(chatID int64, client FortniteTrackerClient) tgbotapi.MessageConfig {
-	var stats []*PlayerInfo
-	for _, nickname := range nameToNick {
-		info, err := client.PlayerInfo(PC, nickname)
-		if err != nil {
-			log.Println(err)
-		} else {
-			stats = append(stats, info)
-		}
-		time.Sleep(2 * time.Second)
-	}
+func prepareStats(chatID int64, asciiStats AsciiTransformable) tgbotapi.MessageConfig {
 	buf := new(bytes.Buffer)
-	writeGroupStats(buf, stats)
+	asciiStats.transform(buf)
 	msg := tgbotapi.NewMessage(chatID, "<pre>"+buf.String()+"</pre>")
 	msg.ParseMode = "html"
 	return msg
@@ -126,12 +119,15 @@ func statsToRow(modeStats GameModeStats) []string {
 	}
 }
 
-func writeStats(out io.Writer, player *PlayerInfo) {
-	//{"Total", "92", "3.0%", "5444", "1.81", ""}, TODO parse lifeTimeStats
+type AsciiTransformable interface {
+	transform(out io.Writer)
+}
+
+func (player *PlayerInfo) transform(out io.Writer) {
 	data := [][]string{
-		append([]string{"Solo"}, statsToRow(player.Stats.Solo)...),
-		append([]string{"Duos"}, statsToRow(player.Stats.Duos)...),
-		append([]string{"Squads"}, statsToRow(player.Stats.Squads)...),
+		append([]string{"solo"}, statsToRow(player.Stats.Solo)...),
+		append([]string{"duos"}, statsToRow(player.Stats.Duos)...),
+		append([]string{"squads"}, statsToRow(player.Stats.Squads)...),
 	}
 	table := tablewriter.NewWriter(out)
 	table.SetHeader(defaultRowHeader)
@@ -141,23 +137,27 @@ func writeStats(out io.Writer, player *PlayerInfo) {
 	table.Render()
 }
 
-func writeGroupStats(out io.Writer, playerGroup []*PlayerInfo) {
+type PlayerInfoGroup struct {
+	Players []PlayerInfo
+}
+
+func (group *PlayerInfoGroup) transform(out io.Writer) {
 	table := tablewriter.NewWriter(out)
 	table.SetHeader(append([]string{"Nickname"}, defaultRowHeader...))
 
-	for _, player := range playerGroup {
+	for _, player := range group.Players {
 		table.Append(append([]string{player.Name, "solo"}, statsToRow(player.Stats.Solo)...))
 	}
 
 	table.Append([]string{"", "", "", "", "", "", ""})
 
-	for _, player := range playerGroup {
+	for _, player := range group.Players {
 		table.Append(append([]string{player.Name, "duos"}, statsToRow(player.Stats.Duos)...))
 	}
 
 	table.Append([]string{"", "", "", "", "", "", ""})
 
-	for _, player := range playerGroup {
+	for _, player := range group.Players {
 		table.Append(append([]string{player.Name, "squads"}, statsToRow(player.Stats.Squads)...))
 	}
 
