@@ -99,7 +99,7 @@ func playerStats(chatID int64, nickname string, client FortniteTrackerClient) tg
 }
 
 func groupStats(chatID int64, client FortniteTrackerClient) tgbotapi.MessageConfig {
-	var stats []*UserInfo
+	var stats []*PlayerInfo
 	for _, nickname := range nameToNick {
 		info, err := client.PlayerInfo(PC, nickname)
 		if err != nil {
@@ -126,7 +126,7 @@ func statsToRow(modeStats GameModeStats) []string {
 	}
 }
 
-func writeStats(out io.Writer, player *UserInfo) {
+func writeStats(out io.Writer, player *PlayerInfo) {
 	//{"Total", "92", "3.0%", "5444", "1.81", ""}, TODO parse lifeTimeStats
 	data := [][]string{
 		append([]string{"Solo"}, statsToRow(player.Stats.Solo)...),
@@ -141,7 +141,7 @@ func writeStats(out io.Writer, player *UserInfo) {
 	table.Render()
 }
 
-func writeGroupStats(out io.Writer, playerGroup []*UserInfo) {
+func writeGroupStats(out io.Writer, playerGroup []*PlayerInfo) {
 	table := tablewriter.NewWriter(out)
 	table.SetHeader(append([]string{"Nickname"}, defaultRowHeader...))
 

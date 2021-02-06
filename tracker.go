@@ -15,7 +15,7 @@ const (
 	XBOX        Platform = "xbl"
 )
 
-type UserInfo struct {
+type PlayerInfo struct {
 	ID    string `json:"accountId"`
 	Name  string `json:"epicUserHandle"`
 	Stats struct {
@@ -70,20 +70,20 @@ func (req *Request) execute() ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (client *FortniteTrackerClient) PlayerInfo(platform Platform, nickname string) (*UserInfo, error) {
+func (client *FortniteTrackerClient) PlayerInfo(platform Platform, nickname string) (*PlayerInfo, error) {
 	req := Request{
 		client,
 		"GET",
 		fmt.Sprintf("/profile/%s/%s", platform, nickname),
 	}
-	userInfoJson, err := req.execute()
+	resp, err := req.execute()
 	if err != nil {
 		return nil, err
 	}
-	userInfo := &UserInfo{}
-	err = json.Unmarshal(userInfoJson, userInfo)
+	playerInfo := &PlayerInfo{}
+	err = json.Unmarshal(resp, playerInfo)
 	if err != nil {
 		return nil, err
 	}
-	return userInfo, nil
+	return playerInfo, nil
 }
