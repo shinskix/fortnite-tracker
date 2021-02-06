@@ -53,7 +53,7 @@ func main() {
 	go http.ListenAndServe(":"+port, nil)
 	fmt.Println("start listen :" + port)
 
-	client := &FortniteTrackerClient{
+	client := FortniteTrackerClient{
 		ApiKey:  fortniteTrackerApiKey,
 		BaseUrl: "https://api.fortnitetracker.com/v1",
 	}
@@ -64,6 +64,8 @@ func main() {
 			chatID := update.Message.Chat.ID
 			command := update.Message.Command()
 			switch command {
+			case "start":
+				continue
 			case "stats":
 				bot.Send(playerStats(chatID, update.Message.CommandArguments(), client))
 			case "alik", "vetal", "lesha", "sasha":
@@ -79,7 +81,7 @@ func main() {
 	}
 }
 
-func playerStats(chatID int64, nickname string, client *FortniteTrackerClient) *tgbotapi.MessageConfig {
+func playerStats(chatID int64, nickname string, client FortniteTrackerClient) tgbotapi.MessageConfig {
 	msg := tgbotapi.NewMessage(chatID, "")
 	if len(nickname) > 0 {
 		playerInfo, err := client.PlayerInfo(PC, nickname)
@@ -93,10 +95,10 @@ func playerStats(chatID int64, nickname string, client *FortniteTrackerClient) *
 			msg.Text = "<pre>" + buf.String() + "</pre>"
 		}
 	}
-	return &msg
+	return msg
 }
 
-func groupStats(chatID int64, client *FortniteTrackerClient) *tgbotapi.MessageConfig {
+func groupStats(chatID int64, client FortniteTrackerClient) tgbotapi.MessageConfig {
 	var stats []*UserInfo
 	for _, nickname := range nameToNick {
 		info, err := client.PlayerInfo(PC, nickname)
@@ -109,10 +111,9 @@ func groupStats(chatID int64, client *FortniteTrackerClient) *tgbotapi.MessageCo
 	}
 	buf := new(bytes.Buffer)
 	writeGroupStats(buf, stats)
-	msg := tgbotapi.NewMessage(chatID, "")
+	msg := tgbotapi.NewMessage(chatID, "<pre>"+buf.String()+"</pre>")
 	msg.ParseMode = "html"
-	msg.Text = "<pre>" + buf.String() + "</pre>"
-	return &msg
+	return msg
 }
 
 func statsToRow(modeStats GameModeStats) []string {
@@ -128,13 +129,13 @@ func statsToRow(modeStats GameModeStats) []string {
 func writeStats(out io.Writer, player *UserInfo) {
 	//{"Total", "92", "3.0%", "5444", "1.81", ""}, TODO parse lifeTimeStats
 	data := [][]string{
-		append([]string{"Solo"}, statsToRow(player.UserStats.Solo)...),
-		append([]string{"Duos"}, statsToRow(player.UserStats.Duos)...),
-		append([]string{"Squads"}, statsToRow(player.UserStats.Squads)...),
+		append([]string{"Solo"}, statsToRow(player.Stats.Solo)...),
+		append([]string{"Duos"}, statsToRow(player.Stats.Duos)...),
+		append([]string{"Squads"}, statsToRow(player.Stats.Squads)...),
 	}
 	table := tablewriter.NewWriter(out)
 	table.SetHeader(defaultRowHeader)
-	table.SetFooter([]string{"", "", "", "", "Player", player.UserName})
+	table.SetFooter([]string{"", "", "", "", "Player", player.Name})
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
@@ -145,19 +146,19 @@ func writeGroupStats(out io.Writer, playerGroup []*UserInfo) {
 	table.SetHeader(append([]string{"Nickname"}, defaultRowHeader...))
 
 	for _, player := range playerGroup {
-		table.Append(append([]string{player.UserName, "solo"}, statsToRow(player.UserStats.Solo)...))
+		table.Append(append([]string{player.Name, "solo"}, statsToRow(player.Stats.Solo)...))
 	}
 
 	table.Append([]string{"", "", "", "", "", "", ""})
 
 	for _, player := range playerGroup {
-		table.Append(append([]string{player.UserName, "duos"}, statsToRow(player.UserStats.Duos)...))
+		table.Append(append([]string{player.Name, "duos"}, statsToRow(player.Stats.Duos)...))
 	}
 
 	table.Append([]string{"", "", "", "", "", "", ""})
 
 	for _, player := range playerGroup {
-		table.Append(append([]string{player.UserName, "squads"}, statsToRow(player.UserStats.Squads)...))
+		table.Append(append([]string{player.Name, "squads"}, statsToRow(player.Stats.Squads)...))
 	}
 
 	table.SetBorder(false)
