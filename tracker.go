@@ -16,15 +16,13 @@ const (
 )
 
 type UserInfo struct {
-	UserId    string        `json:"accountId"`
-	UserName  string        `json:"epicUserHandle"`
-	UserStats FortniteStats `json:"stats"`
-}
-
-type FortniteStats struct {
-	Solo   GameModeStats `json:"p2"`
-	Duos   GameModeStats `json:"p10"`
-	Squads GameModeStats `json:"p9"`
+	ID    string `json:"accountId"`
+	Name  string `json:"epicUserHandle"`
+	Stats struct {
+		Solo   GameModeStats `json:"p2"`
+		Duos   GameModeStats `json:"p10"`
+		Squads GameModeStats `json:"p9"`
+	} `json:"stats"`
 }
 
 type GameModeStats struct {
