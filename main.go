@@ -131,7 +131,6 @@ func (player *PlayerInfo) transform(out io.Writer) {
 	table := tablewriter.NewWriter(out)
 	table.SetHeader(defaultRowHeader)
 	table.SetFooter([]string{"", "", "", "", "Player", player.Name})
-	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
 }
