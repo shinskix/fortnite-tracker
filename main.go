@@ -83,17 +83,16 @@ func main() {
 					}
 				}
 			case "team":
-				group := PlayerInfoGroup{}
-				for _, nickname := range nameToNickname {
-					info, err := client.PlayerInfo(PC, nickname)
-					if err != nil {
-						log.Println(err)
-					} else {
-						group.Players = append(group.Players, *info)
-					}
-					time.Sleep(2 * time.Second)
+				var nicknames []string
+				for _, value := range nameToNickname {
+					nicknames = append(nicknames, value)
 				}
-				bot.Send(prepareStats(chatID, &group))
+				group, err := client.PlayerInfoGroup(PC, nicknames)
+				if err != nil {
+					log.Println(err)
+				} else {
+					bot.Send(prepareStats(chatID, group))
+				}
 			default:
 				bot.Send(tgbotapi.NewMessage(chatID, "Unknown or not yet implemented command."))
 			}
@@ -135,10 +134,6 @@ func (player *PlayerInfo) transform(out io.Writer) {
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
-}
-
-type PlayerInfoGroup struct {
-	Players []PlayerInfo
 }
 
 func (group *PlayerInfoGroup) transform(out io.Writer) {

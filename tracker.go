@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"time"
 )
 
 type Platform string
@@ -23,6 +25,10 @@ type PlayerInfo struct {
 		Duos   GameModeStats `json:"p10"`
 		Squads GameModeStats `json:"p9"`
 	} `json:"stats"`
+}
+
+type PlayerInfoGroup struct {
+	Players []PlayerInfo
 }
 
 type GameModeStats struct {
@@ -86,4 +92,21 @@ func (client *FortniteTrackerClient) PlayerInfo(platform Platform, nickname stri
 		return nil, err
 	}
 	return playerInfo, nil
+}
+
+func (client *FortniteTrackerClient) PlayerInfoGroup(platform Platform, nicknames []string) (*PlayerInfoGroup, error) {
+	var group = PlayerInfoGroup{}
+	for _, nickname := range nicknames {
+		info, err := client.PlayerInfo(platform, nickname)
+		if err == nil {
+			group.Players = append(group.Players, *info)
+		} else {
+			log.Println(err)
+		}
+		time.Sleep(2 * time.Second)
+	}
+	if len(group.Players) == 0 {
+		return nil, fmt.Errorf("failed to get player info group")
+	}
+	return &group, nil
 }
