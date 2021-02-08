@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/joho/godotenv"
-	"github.com/olekukonko/tablewriter"
-
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -22,7 +19,6 @@ var (
 		"sasha": "Jakser",
 		"vetal": "closeup24",
 	}
-	defaultRowHeader = []string{"Mode", "Wins", "WinRate(%)", "Kills", "KD", "Rating"}
 )
 
 func main() {
@@ -67,94 +63,45 @@ func main() {
 			case "start":
 				continue
 			case "stats":
-				playerInfo, err := client.PlayerInfo(PC, update.Message.CommandArguments())
-				if err != nil {
-					log.Println(err)
-				} else {
-					bot.Send(prepareStats(chatID, playerInfo))
-				}
+				sendPlayerStats(chatID, client, bot, update.Message.CommandArguments())
 			case "alik", "vetal", "lesha", "sasha":
-				if nickname, exists := nameToNickname[command]; exists {
-					playerInfo, err := client.PlayerInfo(PC, nickname)
-					if err != nil {
-						log.Println(err)
-					} else {
-						bot.Send(prepareStats(chatID, playerInfo))
-					}
-				}
+				sendPlayerStats(chatID, client, bot, nameToNickname[command])
 			case "team":
 				var nicknames []string
 				for _, value := range nameToNickname {
 					nicknames = append(nicknames, value)
 				}
-				group, err := client.PlayerInfoGroup(PC, nicknames)
-				if err != nil {
-					log.Println(err)
-				} else {
-					bot.Send(prepareStats(chatID, group))
-				}
+				sendPlayerStats(chatID, client, bot, nicknames...)
 			default:
-				bot.Send(tgbotapi.NewMessage(chatID, "Unknown or not yet implemented command."))
+				sendUnknownCommand(chatID, bot)
 			}
 		}
 	}
 }
 
+func sendPlayerStats(chatID int64, client FortniteTrackerClient, bot *tgbotapi.BotAPI, nicknames ...string) {
+	var playerInfo AsciiTransformable
+	var err error
+	if len(nicknames) == 1 {
+		playerInfo, err = client.PlayerInfo(PC, nicknames[0])
+	} else {
+		playerInfo, err = client.PlayerInfoGroup(PC, nicknames)
+	}
+	if err == nil {
+		bot.Send(prepareStats(chatID, playerInfo))
+	} else {
+		log.Println(err)
+	}
+}
+
+func sendUnknownCommand(chatID int64, bot *tgbotapi.BotAPI) {
+	bot.Send(tgbotapi.NewMessage(chatID, "Unknown or not yet implemented command."))
+}
+
 func prepareStats(chatID int64, asciiStats AsciiTransformable) tgbotapi.MessageConfig {
 	buf := new(bytes.Buffer)
-	asciiStats.transform(buf)
+	asciiStats.Transform(buf)
 	msg := tgbotapi.NewMessage(chatID, "<pre>"+buf.String()+"</pre>")
 	msg.ParseMode = "html"
 	return msg
-}
-
-func statsToRow(modeStats GameModeStats) []string {
-	return []string{
-		modeStats.Wins.DisplayValue,
-		modeStats.WinRatio.DisplayValue,
-		modeStats.Kills.DisplayValue,
-		modeStats.KD.DisplayValue,
-		modeStats.TrnRating.DisplayValue,
-	}
-}
-
-type AsciiTransformable interface {
-	transform(out io.Writer)
-}
-
-func (player *PlayerInfo) transform(out io.Writer) {
-	data := [][]string{
-		append([]string{"solo"}, statsToRow(player.Stats.Solo)...),
-		append([]string{"duos"}, statsToRow(player.Stats.Duos)...),
-		append([]string{"squads"}, statsToRow(player.Stats.Squads)...),
-	}
-	table := tablewriter.NewWriter(out)
-	table.SetHeader(defaultRowHeader)
-	table.SetFooter([]string{"", "", "", "", "Player", player.Name})
-	table.AppendBulk(data)
-	table.Render()
-}
-
-func (group *PlayerInfoGroup) transform(out io.Writer) {
-	table := tablewriter.NewWriter(out)
-	table.SetHeader(append([]string{"Nickname"}, defaultRowHeader...))
-
-	for _, player := range group.Players {
-		table.Append(append([]string{player.Name, "solo"}, statsToRow(player.Stats.Solo)...))
-	}
-
-	table.Append([]string{"", "", "", "", "", "", ""})
-
-	for _, player := range group.Players {
-		table.Append(append([]string{player.Name, "duos"}, statsToRow(player.Stats.Duos)...))
-	}
-
-	table.Append([]string{"", "", "", "", "", "", ""})
-
-	for _, player := range group.Players {
-		table.Append(append([]string{player.Name, "squads"}, statsToRow(player.Stats.Squads)...))
-	}
-
-	table.SetBorder(false)
-	table.Render()
 }
