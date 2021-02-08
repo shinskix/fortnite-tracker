@@ -98,10 +98,13 @@ func sendUnknownCommand(chatID int64, bot *tgbotapi.BotAPI) {
 	bot.Send(tgbotapi.NewMessage(chatID, "Unknown or not yet implemented command."))
 }
 
-func prepareStats(chatID int64, asciiStats AsciiTransformable) tgbotapi.MessageConfig {
-	buf := new(bytes.Buffer)
-	asciiStats.Transform(buf)
-	msg := tgbotapi.NewMessage(chatID, "<pre>"+buf.String()+"</pre>")
-	msg.ParseMode = "html"
-	return msg
+func prepareStats(chatID int64, asciiStats AsciiTransformable) tgbotapi.PhotoConfig {
+	textBuf := new(bytes.Buffer)
+	asciiStats.Transform(textBuf)
+	imgBuf := new(bytes.Buffer)
+	err := CreateImage(imgBuf, textBuf.String())
+	if err != nil {
+		log.Println(err)
+	}
+	return tgbotapi.NewPhotoUpload(chatID, tgbotapi.FileBytes{Name: "Stats", Bytes: imgBuf.Bytes()})
 }
