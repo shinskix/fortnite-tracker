@@ -161,4 +161,6 @@ $RECYCLE.BIN/
 
 .env
 
+*.png
+
 # End of https://www.toptal.com/developers/gitignore/api/linux,windows,macos,intellij,go
