@@ -1,0 +1,6 @@
+runtime: go115
+instance_class: F1
+env_variables:
+  TELEGRAM_BOT_TOKEN: $VALUE
+  FORTNITE_TRACKER_API_KEY: $VALUE
+  APP_NAME: fortnite_elves_bot

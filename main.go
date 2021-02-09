@@ -22,26 +22,37 @@ var (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Panicf("unable to read .env file. %v\n", err)
+	godotenv.Load()
+	telegramBotToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	if telegramBotToken == "" {
+		log.Panic("Telegram bot token not found")
 	}
 
-	telegramBotToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	fortniteTrackerApiKey := os.Getenv("FORTNITE_TRACKER_API_KEY")
-	webhookUrl := os.Getenv("WEBHOOK_URL")
+	if fortniteTrackerApiKey == "" {
+		log.Panic("Fortnite tracker api key not found")
+	}
+
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Println("Using default port :8080")
+	}
 
 	bot, err := tgbotapi.NewBotAPI(telegramBotToken)
 	if err != nil {
-		log.Panic(err)
+		log.Panicf("Unable to create a BotAPI instance. Error: %v", err)
 	}
 
 	log.Printf("Authorized on account %s\n", bot.Self.UserName)
 
-	_, err = bot.SetWebhook(tgbotapi.NewWebhook(webhookUrl))
-	if err != nil {
-		log.Panic(err)
+	webhookUrl := os.Getenv("WEBHOOK_URL")
+	if webhookUrl != "" {
+		// for local development purposes
+		_, err = bot.SetWebhook(tgbotapi.NewWebhook(webhookUrl))
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 
 	updates := bot.ListenForWebhook("/")
@@ -63,15 +74,15 @@ func main() {
 			case "start":
 				continue
 			case "stats":
-				sendPlayerStats(chatID, client, bot, update.Message.CommandArguments())
+				sendPlayerPhotoStats(chatID, client, bot, update.Message.CommandArguments())
 			case "alik", "vetal", "lesha", "sasha":
-				sendPlayerStats(chatID, client, bot, nameToNickname[command])
+				sendPlayerPhotoStats(chatID, client, bot, nameToNickname[command])
 			case "team":
 				var nicknames []string
 				for _, value := range nameToNickname {
 					nicknames = append(nicknames, value)
 				}
-				sendPlayerStats(chatID, client, bot, nicknames...)
+				sendPlayerPhotoStats(chatID, client, bot, nicknames...)
 			default:
 				sendUnknownCommand(chatID, bot)
 			}
@@ -79,7 +90,7 @@ func main() {
 	}
 }
 
-func sendPlayerStats(chatID int64, client FortniteTrackerClient, bot *tgbotapi.BotAPI, nicknames ...string) {
+func sendPlayerPhotoStats(chatID int64, client FortniteTrackerClient, bot *tgbotapi.BotAPI, nicknames ...string) {
 	var playerInfo AsciiTransformable
 	var err error
 	if len(nicknames) == 1 {
