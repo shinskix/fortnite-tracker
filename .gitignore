@@ -159,8 +159,13 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# env configuration
 .env
 
+# generated images
 *.png
+
+# app.yaml that is used for deployment to production
+app.yaml
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,windows,macos,intellij,go
