@@ -62,6 +62,8 @@ type Request struct {
 	URL       string
 }
 
+var httpClient = &http.Client{Timeout: 10 * time.Second}
+
 func (req *Request) execute() ([]byte, error) {
 	request, err := http.NewRequest(req.Method, req.FTNClient.BaseUrl+req.URL, nil)
 	if err != nil {

@@ -8,18 +8,14 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
-var (
-	httpClient     = &http.Client{Timeout: 10 * time.Second}
-	nameToNickname = map[string]string{
-		"alik":  "alikklimenkov",
-		"lesha": "shinskix",
-		"sasha": "Jakser",
-		"vetal": "closeup24",
-	}
-)
+var nameToNickname = map[string]string{
+	"alik":  "alikklimenkov",
+	"lesha": "shinskix",
+	"sasha": "Jakser",
+	"vetal": "closeup24",
+}
 
 func main() {
 	godotenv.Load()
