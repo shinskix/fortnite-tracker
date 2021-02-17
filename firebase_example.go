@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, err := app.Database(ctx)
+	client, err := app.Firestore(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func main() {
 	bytes := make([]byte, stat.Size())
 	fd.Read(bytes)
 	json.Unmarshal(bytes, info)
-	if err = client.NewRef("/stats/test").Set(ctx, info); err != nil {
+	if _, _, err = client.Collection("stats").Add(ctx, info); err != nil {
 		log.Fatal(err)
 	}
 }
