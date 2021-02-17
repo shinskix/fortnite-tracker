@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, err := app.Firestore(ctx)
+	client, err := app.Database(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +37,13 @@ func main() {
 	bytes := make([]byte, stat.Size())
 	fd.Read(bytes)
 	json.Unmarshal(bytes, info)
-	if _, _, err = client.Collection("stats").Add(ctx, info); err != nil {
+	ref := client.NewRef("fortnite/stats")
+	playerRef := ref.Child(info.Name)
+	newStat, err := playerRef.Push(ctx, nil)
+	if err != nil {
+		log.Fatalln("error pushing stat node:", err)
+	}
+	if err = newStat.Set(ctx, info); err != nil {
 		log.Fatal(err)
 	}
 }
