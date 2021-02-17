@@ -52,25 +52,23 @@ type StatValue struct {
 }
 
 type FortniteTrackerClient struct {
-	ApiKey  string
-	BaseUrl string
+	ApiKey     string
+	BaseUrl    string
+	HttpClient *http.Client
 }
 
 type Request struct {
-	FTNClient *FortniteTrackerClient
-	Method    string
-	URL       string
+	Method string
+	URL    string
 }
 
-var httpClient = &http.Client{Timeout: 10 * time.Second}
-
-func (req *Request) execute() ([]byte, error) {
-	request, err := http.NewRequest(req.Method, req.FTNClient.BaseUrl+req.URL, nil)
+func (client *FortniteTrackerClient) execute(req *Request) ([]byte, error) {
+	request, err := http.NewRequest(req.Method, client.BaseUrl+req.URL, nil)
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("TRN-Api-Key", req.FTNClient.ApiKey)
-	resp, err := httpClient.Do(request)
+	request.Header.Add("TRN-Api-Key", client.ApiKey)
+	resp, err := client.HttpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +77,11 @@ func (req *Request) execute() ([]byte, error) {
 }
 
 func (client *FortniteTrackerClient) PlayerInfo(platform Platform, nickname string) (*PlayerInfo, error) {
-	req := Request{
-		client,
+	req := &Request{
 		"GET",
 		fmt.Sprintf("/profile/%s/%s", platform, nickname),
 	}
-	resp, err := req.execute()
+	resp, err := client.execute(req)
 	if err != nil {
 		return nil, err
 	}

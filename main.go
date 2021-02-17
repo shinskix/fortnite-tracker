@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var nameToNickname = map[string]string{
@@ -59,6 +60,9 @@ func main() {
 	client := FortniteTrackerClient{
 		ApiKey:  fortniteTrackerApiKey,
 		BaseUrl: "https://api.fortnitetracker.com/v1",
+		HttpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
 
 	for update := range updates {
