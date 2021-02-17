@@ -104,6 +104,8 @@ func (client *FortniteTrackerClient) PlayerInfo(platform Platform, nickname stri
 		fmt.Sprintf("/profile/%s/%s", platform, nickname),
 	}
 	resp, err := client.execute(req)
+	// TODO think about rate limiter
+	time.Sleep(2 * time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +126,6 @@ func (client *FortniteTrackerClient) PlayerInfoGroup(platform Platform, nickname
 		} else {
 			log.Println(err)
 		}
-		time.Sleep(2 * time.Second)
 	}
 	if len(group.Players) == 0 {
 		return nil, fmt.Errorf("failed to get player info group")

@@ -4,66 +4,85 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/robfig/cron/v3"
+	"google.golang.org/api/option"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
-var nameToNickname = map[string]string{
-	"alik":  "alikklimenkov",
-	"lesha": "shinskix",
-	"sasha": "Jakser",
-	"vetal": "closeup24",
+type Config struct {
+	PlayerNameToNickname    map[string]string `envconfig:"PLAYERS" required:"true"`
+	TelegramBotToken        string            `envconfig:"TELEGRAM_BOT_TOKEN" required:"true"`
+	FortniteTrackerApiKey   string            `envconfig:"FORTNITE_TRACKER_API_KEY" required:"true"`
+	FirebaseDatabaseURL     string            `envconfig:"FIREBASE_DB_URL" required:"true"`
+	DbSyncCronSpec          string            `envconfig:"DB_CRON_SPEC" required:"true"`
+	FirebaseCredentialsFile string            `envconfig:"FIREBASE_DB_CREDS"`
+	Port                    string            `envconfig:"PORT" default:"8080"`
+	WebhookURL              string            `envconfig:"WEBHOOK_URL"`
 }
 
 func main() {
-	godotenv.Load()
-	telegramBotToken := os.Getenv("TELEGRAM_BOT_TOKEN")
-	if telegramBotToken == "" {
-		log.Panic("Telegram bot token not found")
-	}
-
-	fortniteTrackerApiKey := os.Getenv("FORTNITE_TRACKER_API_KEY")
-	if fortniteTrackerApiKey == "" {
-		log.Panic("Fortnite tracker api key not found")
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Println("Using default port :8080")
-	}
-
-	bot, err := tgbotapi.NewBotAPI(telegramBotToken)
+	var appConfig Config
+	err := envconfig.Process("", &appConfig)
 	if err != nil {
-		log.Panicf("Unable to create a BotAPI instance. Error: %v", err)
+		log.Fatalln("Error loading application config", err)
 	}
 
+	bot, err := tgbotapi.NewBotAPI(appConfig.TelegramBotToken)
+	if err != nil {
+		log.Fatalln("Error creating telegram bot instance", err)
+	}
 	log.Printf("Authorized on account %s\n", bot.Self.UserName)
 
-	webhookUrl := os.Getenv("WEBHOOK_URL")
-	if webhookUrl != "" {
-		// for local development purposes
-		_, err = bot.SetWebhook(tgbotapi.NewWebhook(webhookUrl))
+	if appConfig.WebhookURL != "" {
+		// for local development
+		_, err = bot.SetWebhook(tgbotapi.NewWebhook(appConfig.WebhookURL))
 		if err != nil {
-			log.Panic(err)
+			log.Fatalln("Error setting telegram webhook", err)
 		}
 	}
 
 	updates := bot.ListenForWebhook("/")
+	go http.ListenAndServe(":"+appConfig.Port, nil)
+	fmt.Println("start listen :" + appConfig.Port)
 
-	go http.ListenAndServe(":"+port, nil)
-	fmt.Println("start listen :" + port)
+	var elvesNicknames []string
+	for _, value := range appConfig.PlayerNameToNickname {
+		elvesNicknames = append(elvesNicknames, value)
+	}
 
-	client := FortniteTrackerClient{
-		ApiKey:  fortniteTrackerApiKey,
+	fortniteTrackerClient := FortniteTrackerClient{
+		ApiKey:  appConfig.FortniteTrackerApiKey,
 		BaseUrl: "https://api.fortnitetracker.com/v1",
 		HttpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 	}
+
+	var opts []option.ClientOption
+	if appConfig.FirebaseCredentialsFile != "" {
+		opts = append(opts, option.WithCredentialsFile(appConfig.FirebaseCredentialsFile))
+	}
+
+	playerStatsRepository := &PlayerStatsRepository{
+		appConfig.FirebaseDatabaseURL,
+		opts,
+	}
+	err = playerStatsRepository.initialize()
+	if err != nil {
+		log.Fatalln("Error initializing repository", err)
+	}
+
+	dbCron := cron.New()
+	_, err = dbCron.AddFunc(appConfig.DbSyncCronSpec, func() {
+		syncStats(elvesNicknames, fortniteTrackerClient, playerStatsRepository)
+	})
+	if err != nil {
+		log.Fatalln("Error registering cron function", err)
+	}
+	go dbCron.Start()
 
 	for update := range updates {
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
@@ -74,18 +93,29 @@ func main() {
 			case "start":
 				continue
 			case "stats":
-				sendPlayerPhotoStats(chatID, client, bot, update.Message.CommandArguments())
+				sendPlayerPhotoStats(chatID, fortniteTrackerClient, bot, update.Message.CommandArguments())
 			case "alik", "vetal", "lesha", "sasha":
-				sendPlayerPhotoStats(chatID, client, bot, nameToNickname[command])
+				sendPlayerPhotoStats(chatID, fortniteTrackerClient, bot, appConfig.PlayerNameToNickname[command])
 			case "team":
-				var nicknames []string
-				for _, value := range nameToNickname {
-					nicknames = append(nicknames, value)
-				}
-				sendPlayerPhotoStats(chatID, client, bot, nicknames...)
+				sendPlayerPhotoStats(chatID, fortniteTrackerClient, bot, elvesNicknames...)
 			default:
 				sendUnknownCommand(chatID, bot)
 			}
+		}
+	}
+}
+
+func syncStats(elvesNicknames []string, fortniteTrackerClient FortniteTrackerClient, playerStatsRepository *PlayerStatsRepository) {
+	for _, nickname := range elvesNicknames {
+		log.Printf("Syncing %s stats", nickname)
+		playerInfo, err := fortniteTrackerClient.PlayerInfo(PC, nickname)
+		if err == nil {
+			err = playerStatsRepository.storeFortniteStats(playerInfo)
+			if err != nil {
+				log.Printf("Failed to store %s stats. Error: %v\n", nickname, err)
+			}
+		} else {
+			log.Printf("Failed to sync %s stats. Error %v\n", nickname, err)
 		}
 	}
 }

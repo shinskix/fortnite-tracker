@@ -6,10 +6,12 @@ import (
 	"google.golang.org/api/option"
 	"log"
 	"os"
+	"strconv"
+	"time"
 )
 import "context"
 
-func main() {
+func mainTest() {
 	ctx := context.Background()
 	conf := &firebase.Config{
 		DatabaseURL: "https://fortnit-elves-bot-default-rtdb.firebaseio.com/",
@@ -39,7 +41,8 @@ func main() {
 	json.Unmarshal(bytes, info)
 	ref := client.NewRef("fortnite/stats")
 	playerRef := ref.Child(info.Name)
-	newStat, err := playerRef.Push(ctx, nil)
+	timeRef := playerRef.Child(strconv.FormatInt(time.Now().Unix(), 10))
+	newStat, err := timeRef.Push(ctx, nil)
 	if err != nil {
 		log.Fatalln("error pushing stat node:", err)
 	}
