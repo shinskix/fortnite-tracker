@@ -4,3 +4,9 @@ env_variables:
   TELEGRAM_BOT_TOKEN: $VALUE
   FORTNITE_TRACKER_API_KEY: $VALUE
   APP_NAME: fortnite_elves_bot
+  CRON_SYNC_STATS_SPEC: 0 12 * * *
+  FORTNITE_PLAYERS:
+    alik: alikklimenkov
+    lesha: shinskix
+    sasha: Jakser
+    vetal: closeup24
