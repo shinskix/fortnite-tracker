@@ -25,10 +25,29 @@ type PlayerInfo struct {
 		Duos   GameModeStats `json:"p10"`
 		Squads GameModeStats `json:"p9"`
 	} `json:"stats"`
+	RecentMatchesStats []MatchesStats `json:"recentMatches"`
 }
 
 type PlayerInfoGroup struct {
 	Players []PlayerInfo
+}
+
+type MatchesStats struct {
+	ID              int       `json:"id"`
+	GameMode        string    `json:"playlist"`
+	Kills           int       `json:"kills"`
+	Matches         int       `json:"matches"`
+	Top3            int       `json:"top3"`
+	Top5            int       `json:"top5"`
+	Top6            int       `json:"top6"`
+	Top10           int       `json:"top10"`
+	Top12           int       `json:"top12"`
+	Top25           int       `json:"top25"`
+	DateCollected   time.Time `json:"dateCollected"`
+	Score           int       `json:"score"`
+	TrnRating       float32   `json:"trnRating"`
+	TrnRatingChange float32   `json:"rtnRatingChange"`
+	PlayersOutlived int       `json:"playersOutlived"`
 }
 
 type GameModeStats struct {
