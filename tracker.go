@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -32,36 +33,38 @@ type PlayerInfoGroup struct {
 	Players []PlayerInfo
 }
 
+type MatchDateCollected time.Time
+
 type MatchesStats struct {
-	ID              int       `json:"id"`
-	GameMode        string    `json:"playlist"`
-	Kills           int       `json:"kills"`
-	Matches         int       `json:"matches"`
-	Top3            int       `json:"top3"`
-	Top5            int       `json:"top5"`
-	Top6            int       `json:"top6"`
-	Top10           int       `json:"top10"`
-	Top12           int       `json:"top12"`
-	Top25           int       `json:"top25"`
-	DateCollected   time.Time `json:"dateCollected"`
-	Score           int       `json:"score"`
-	TrnRating       float32   `json:"trnRating"`
-	TrnRatingChange float32   `json:"rtnRatingChange"`
-	PlayersOutlived int       `json:"playersOutlived"`
+	ID              int                `json:"id"`
+	GameMode        string             `json:"playlist"`
+	Kills           int                `json:"kills"`
+	Matches         int                `json:"matches"`
+	Top3            int                `json:"top3"`
+	Top5            int                `json:"top5"`
+	Top6            int                `json:"top6"`
+	Top10           int                `json:"top10"`
+	Top12           int                `json:"top12"`
+	Top25           int                `json:"top25"`
+	DateCollected   MatchDateCollected `json:"dateCollected"`
+	Score           int                `json:"score"`
+	TrnRating       float32            `json:"trnRating"`
+	TrnRatingChange float32            `json:"rtnRatingChange"`
+	PlayersOutlived int                `json:"playersOutlived"`
 }
 
 type GameModeStats struct {
-	TrnRating StatValue `json:"trnRating"`
-	Score     StatValue `json:"score"`
-	KD        StatValue `json:"kd"`
-	KPM       StatValue `json:"kpg"`
-	SPM       StatValue `json:"scorePerMatch"`
-	WinRatio  StatValue `json:"winRatio"`
-	Wins      StatValue `json:"top1"`
-	Kills     StatValue `json:"kills"`
+	TrnRating StatWrapper `json:"trnRating"`
+	Score     StatWrapper `json:"score"`
+	KD        StatWrapper `json:"kd"`
+	KPM       StatWrapper `json:"kpg"`
+	SPM       StatWrapper `json:"scorePerMatch"`
+	WinRatio  StatWrapper `json:"winRatio"`
+	Wins      StatWrapper `json:"top1"`
+	Kills     StatWrapper `json:"kills"`
 }
 
-type StatValue struct {
+type StatWrapper struct {
 	Label        string  `json:"label"`
 	Field        string  `json:"field"`
 	Category     string  `json:"category"`
@@ -127,4 +130,18 @@ func (client *FortniteTrackerClient) PlayerInfoGroup(platform Platform, nickname
 		return nil, fmt.Errorf("failed to get player info group")
 	}
 	return &group, nil
+}
+
+func (m *MatchDateCollected) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	t, err := time.Parse("2006-01-02T15:04:05", s)
+	if err != nil {
+		return err
+	}
+	*m = MatchDateCollected(t)
+	return nil
+}
+
+func (m MatchDateCollected) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(m))
 }
