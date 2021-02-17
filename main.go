@@ -13,14 +13,14 @@ import (
 )
 
 type Config struct {
-	PlayerNameToNickname    map[string]string `envconfig:"PLAYERS" required:"true"`
-	TelegramBotToken        string            `envconfig:"TELEGRAM_BOT_TOKEN" required:"true"`
+	PlayerNameToNickname    map[string]string `envconfig:"FORTNITE_PLAYERS" required:"true"`
 	FortniteTrackerApiKey   string            `envconfig:"FORTNITE_TRACKER_API_KEY" required:"true"`
+	TelegramBotToken        string            `envconfig:"TELEGRAM_BOT_TOKEN" required:"true"`
+	WebhookURL              string            `envconfig:"TELEGRAM_WEBHOOK_URL"`
 	FirebaseDatabaseURL     string            `envconfig:"FIREBASE_DB_URL" required:"true"`
-	DbSyncCronSpec          string            `envconfig:"DB_CRON_SPEC" required:"true"`
-	FirebaseCredentialsFile string            `envconfig:"FIREBASE_DB_CREDS"`
+	FirebaseCredentialsFile string            `envconfig:"FIREBASE_DB_CREDENTIALS"`
+	DbSyncCronSpec          string            `envconfig:"CRON_SYNC_STATS_SPEC" required:"true"`
 	Port                    string            `envconfig:"PORT" default:"8080"`
-	WebhookURL              string            `envconfig:"WEBHOOK_URL"`
 }
 
 func main() {
