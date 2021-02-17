@@ -57,12 +57,12 @@ type FortniteTrackerClient struct {
 	HttpClient *http.Client
 }
 
-type Request struct {
+type FortniteTrackerRequest struct {
 	Method string
 	URL    string
 }
 
-func (client *FortniteTrackerClient) execute(req *Request) ([]byte, error) {
+func (client *FortniteTrackerClient) execute(req *FortniteTrackerRequest) ([]byte, error) {
 	request, err := http.NewRequest(req.Method, client.BaseUrl+req.URL, nil)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (client *FortniteTrackerClient) execute(req *Request) ([]byte, error) {
 }
 
 func (client *FortniteTrackerClient) PlayerInfo(platform Platform, nickname string) (*PlayerInfo, error) {
-	req := &Request{
+	req := &FortniteTrackerRequest{
 		"GET",
 		fmt.Sprintf("/profile/%s/%s", platform, nickname),
 	}
