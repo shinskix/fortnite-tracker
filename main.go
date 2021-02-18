@@ -75,7 +75,7 @@ func main() {
 		log.Fatalln("Error initializing repository", err)
 	}
 
-	dbCron := cron.New()
+	dbCron := cron.New(cron.WithLocation(time.FixedZone("Europe/Kiev", 0)))
 	_, err = dbCron.AddFunc(appConfig.DbSyncCronSpec, func() {
 		syncStats(elvesNicknames, fortniteTrackerClient, playerStatsRepository)
 	})
