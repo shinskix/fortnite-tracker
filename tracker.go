@@ -49,7 +49,7 @@ type MatchesStats struct {
 	DateCollected   MatchDateCollected `json:"dateCollected"`
 	Score           int                `json:"score"`
 	TrnRating       float32            `json:"trnRating"`
-	TrnRatingChange float32            `json:"rtnRatingChange"`
+	TrnRatingChange float32            `json:"trnRatingChange"`
 	PlayersOutlived int                `json:"playersOutlived"`
 }
 
