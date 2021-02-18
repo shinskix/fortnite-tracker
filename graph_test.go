@@ -1,160 +1,101 @@
 package main
 
 import (
-	"encoding/json"
+	"fmt"
 	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
-	"log"
+	"math"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
 )
 
 func TestChart(t *testing.T) {
-	info := &PlayerInfo{}
-	fd, err := os.Open("./stats.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	stat, err := fd.Stat()
-	if err != nil {
-		log.Fatal(err)
-	}
-	bytes := make([]byte, stat.Size())
-	fd.Read(bytes)
-	json.Unmarshal(bytes, info)
-
-	ratings := make([]float64, 0)
-
-	profitStyle := chart.Style{
-		FillColor:   drawing.ColorFromHex("13c158"),
-		StrokeColor: drawing.ColorFromHex("13c158"),
-		StrokeWidth: 0,
-	}
-
-	lossStyle := chart.Style{
-		FillColor:   drawing.ColorFromHex("c11313"),
-		StrokeColor: drawing.ColorFromHex("c11313"),
-		StrokeWidth: 0,
-	}
-
-	ratingChanges2 := make([]chart.Value, 0)
-	kds := make([]float64, 0)
-	for _, matchStats := range info.RecentMatchesStats {
-		if matchStats.GameMode != "p10" {
-			continue
+	n := 60
+	ratings := make([]float64, n)
+	days := make([]time.Time, n)
+	kds := make([]float64, n)
+	now := time.Now().AddDate(0, 0, -n)
+	minValue := 10000.0
+	maxValue := 0.0
+	ratings[0] = 1500
+	days[0] = now
+	kds[0] = 1.1
+	rand.Seed(7)
+	for i := 1; i < n; i++ {
+		days[i] = now.AddDate(0, 0, i)
+		sign := 1
+		if rand.Intn(100) < 50 {
+			sign = -1
 		}
-		ratings = append(ratings, float64(matchStats.TrnRating))
-		var style chart.Style
-		if matchStats.TrnRatingChange < 0 {
-			style = lossStyle
-		} else {
-			style = profitStyle
+		ratings[i] = math.Max(0, ratings[i-1]+float64(rand.Intn(200)*sign))
+		kds[i] = math.Max(0, kds[i-1]+float64(rand.Intn(80)*sign)/1000)
+		if ratings[i] < minValue {
+			minValue = ratings[i]
 		}
-		ratingChanges2 = append(ratingChanges2, chart.Value{
-			Label: time.Time(matchStats.DateCollected).Format("Mon Jan 2 15:04:05 MST 2006"),
-			Value: float64(matchStats.TrnRatingChange),
-			Style: style,
-		})
-		kds = append(kds, float64(matchStats.Kills)/float64(matchStats.Matches))
+		if ratings[i] > maxValue {
+			maxValue = ratings[i]
+		}
 	}
-
-	/*
-		PercentChangeSeries
-	*/
-	//graph := chart.Chart{
-	//	XAxis: chart.XAxis{
-	//		TickPosition: chart.TickPositionBetweenTicks,
-	//		ValueFormatter: func(v interface{}) string {
-	//			typed := v.(float64)
-	//			typedDate := chart.TimeFromFloat64(typed)
-	//			return fmt.Sprintf("%d-%d-%d", typedDate.Month(), typedDate.Day(), typedDate.Year())
-	//		},
-	//	},
-	//	Series: []chart.Series{
-	//		chart.PercentChangeSeries{
-	//			Style: chart.Style{
-	//				StrokeColor: drawing.ColorRed,               // will supercede defaults
-	//				FillColor:   drawing.ColorRed.WithAlpha(64), // will supercede defaults
-	//			},
-	//			YAxis: chart.YAxisPrimary,
-	//			InnerSeries: chart.TimeSeries{
-	//				XValues: dates,
-	//				YValues: kds,
-	//			},
-	//		},
-	//		chart.PercentChangeSeries{
-	//			Name: ""
-	//			Style: chart.Style{
-	//				StrokeColor: drawing.ColorRed,               // will supercede defaults
-	//				FillColor:   drawing.ColorRed.WithAlpha(64), // will supercede defaults
-	//			},
-	//			YAxis: chart.YAxisPrimary,
-	//			InnerSeries: chart.TimeSeries{
-	//				Style: chart.Style{
-	//					StrokeColor: drawing.ColorBlue,               // will supercede defaults
-	//					FillColor:   drawing.ColorBlue.WithAlpha(64), // will supercede defaults
-	//				},
-	//				YAxis:   chart.YAxisSecondary,
-	//				XValues: dates,
-	//				YValues: ratings,
-	//			},
-	//		},
-	//	},
-	//}
-
-	//graph := chart.Chart{
-	//	XAxis: chart.XAxis{
-	//		TickPosition: chart.TickPositionBetweenTicks,
-	//		ValueFormatter: func(v interface{}) string {
-	//			typed := v.(float64)
-	//			typedDate := chart.TimeFromFloat64(typed)
-	//			return fmt.Sprintf("%d-%d-%d", typedDate.Month(), typedDate.Day(), typedDate.Year())
-	//		},
-	//	},
-	//	Series: []chart.Series{
-	//		chart.TimeSeries{
-	//			Name: "k/d",
-	//			Style: chart.Style{
-	//				StrokeColor: drawing.ColorRed,               // will supercede defaults
-	//				FillColor:   drawing.ColorRed.WithAlpha(64), // will supercede defaults
-	//			},
-	//			XValues: dates,
-	//			YValues: kds,
-	//		},
-	//		chart.TimeSeries{
-	//			Name: "rating",
-	//			Style: chart.Style{
-	//				StrokeColor: drawing.ColorBlue,               // will supercede defaults
-	//				FillColor:   drawing.ColorBlue.WithAlpha(64), // will supercede defaults
-	//			},
-	//			YAxis:   chart.YAxisSecondary,
-	//			XValues: dates,
-	//			YValues: ratings,
-	//		},
-	//	},
-	//}
-
-	graph := chart.BarChart{
-		Title: "TRN Rating Change (" + info.Name + ")",
-		Background: chart.Style{
-			Padding: chart.Box{
-				Top: 40,
+	ratingSeries := chart.TimeSeries{
+		Name: "Rating",
+		Style: chart.Style{
+			StrokeColor: drawing.ColorRed,               // will supercede defaults
+			FillColor:   drawing.ColorRed.WithAlpha(64), // will supercede defaults
+		},
+		YAxis:   chart.YAxisPrimary,
+		XValues: days,
+		YValues: ratings,
+	}
+	graph := chart.Chart{
+		YAxis: chart.YAxis{
+			Range: &chart.ContinuousRange{
+				Min: minValue - 0.5*minValue,
+				Max: maxValue + 0.3*maxValue,
 			},
 		},
-		Height:       512,
-		BarWidth:     60,
-		UseBaseValue: true,
-		BaseValue:    0.0,
-		Bars:         ratingChanges2,
+		XAxis: chart.XAxis{
+			TickPosition: chart.TickPositionBetweenTicks,
+			ValueFormatter: func(v interface{}) string {
+				typed := v.(float64)
+				typedDate := chart.TimeFromFloat64(typed)
+				return fmt.Sprintf("%d-%d-%d", typedDate.Month(), typedDate.Day(), typedDate.Year())
+			},
+		},
+		Series: []chart.Series{
+			ratingSeries,
+			chart.TimeSeries{
+				Name: "K/D",
+				Style: chart.Style{
+					StrokeColor:     drawing.ColorBlue,
+					StrokeDashArray: []float64{5.0, 5.0},
+				},
+				YAxis:   chart.YAxisSecondary,
+				XValues: days,
+				YValues: kds,
+			},
+			chart.SMASeries{
+				Name: "Rating - SMA",
+				Style: chart.Style{
+					StrokeColor:     drawing.ColorBlack,
+					StrokeDashArray: []float64{5.0, 5.0},
+				},
+				InnerSeries: ratingSeries,
+			},
+		},
+	}
+
+	graph.Elements = []chart.Renderable{
+		chart.LegendLeft(&graph),
 	}
 
 	file, err := os.Create("test-image.png")
 	if err != nil {
-		log.Fatal(err)
+		t.FailNow()
 	}
 	err = graph.Render(chart.PNG, file)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 }
