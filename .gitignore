@@ -165,6 +165,7 @@ $RECYCLE.BIN/
 # generated images
 *.png
 
+*.json
 # app.yaml that is used for deployment to production
 app.yaml
 

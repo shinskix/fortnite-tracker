@@ -27,3 +27,5 @@
 # Other files
 *.png
 *.template
+*.md
+.idea/
