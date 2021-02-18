@@ -2,14 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	chart "github.com/wcharczuk/go-chart/v2"
+	"github.com/wcharczuk/go-chart/v2"
 	"github.com/wcharczuk/go-chart/v2/drawing"
 	"log"
 	"os"
+	"testing"
 	"time"
 )
 
-func mainTest() {
+func TestChart(t *testing.T) {
 	info := &PlayerInfo{}
 	fd, err := os.Open("./stats.json")
 	if err != nil {
@@ -154,6 +155,6 @@ func mainTest() {
 	}
 	err = graph.Render(chart.PNG, file)
 	if err != nil {
-		log.Fatalln(err)
+		t.Fail()
 	}
 }
